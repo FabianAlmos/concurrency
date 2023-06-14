@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"concuLec/db"
 	model "concuLec/models"
 	response "concuLec/responses"
 	"encoding/json"
@@ -45,15 +46,23 @@ func getSuppliers() {
 }
 
 func allocate() {
-	for i := 0; i < len(suppliers.Suppliers); i++ {
+	for i := 1; i <= len(suppliers.Suppliers); i++ {
 		job := Job{i, suppliers.Suppliers[i]}
 		jobs <- job
 	}
 	close(jobs)
 }
 
-func updateDB(menuItem model.Menu) {
-	
+func updateDB(supplier_id int, menuItem model.Menu) {
+	db := db.GetDB()
+	stmt, err := db.Prepare("INSERT INTO menu_items (image, ingredients, name, price, type) VALUES ($1, $2, $3, $4, $5)")
+	if err != nil {
+		panic(err)
+	}
+	_, err = stmt.Exec(menuItem.Image, menuItem.Ingredients, menuItem.Name, menuItem.Price, menuItem.Type)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func processMenu(id int) {
@@ -69,7 +78,7 @@ func processMenu(id int) {
 	}
 
 	for i := 0; i < len(menu.Menu); i++ {
-		updateDB(menu.Menu[i])
+		updateDB(id, menu.Menu[i])
 	}
 }
 
