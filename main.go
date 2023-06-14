@@ -1,11 +1,12 @@
 package main
 
 import (
+	worker "concuLec/workers"
 	"fmt"
 )
 
 func main() {
-	queue := NewAsyncQueue()
+	queue := worker.NewAsyncQueue()
 
 	l := []string{"1", "2", "3"}
 	queue.Start()
