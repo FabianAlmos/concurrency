@@ -1,5 +1,7 @@
 package main
 
-func main() {
+import worker "concuLec/workers"
 
+func main() {
+	worker.Start()
 }

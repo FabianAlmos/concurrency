@@ -24,9 +24,10 @@ var jobs = make(chan Job, 10)
 var results = make(chan Result, 10)
 var suppliers = &response.SupplierCollectionResponse{}
 
-func Timer() {
+func Start() {
 	for {
-		<-time.After(10 * time.Minute)
+		jobs = make(chan Job, 10)
+		<-time.After(5 * time.Second)
 		getSuppliers()
 		allocate()
 		createWorkerPool()
@@ -46,23 +47,24 @@ func getSuppliers() {
 }
 
 func allocate() {
-	for i := 1; i <= len(suppliers.Suppliers); i++ {
+	for i := 0; i < len(suppliers.Suppliers); i++ {
 		job := Job{i, suppliers.Suppliers[i]}
 		jobs <- job
 	}
 	close(jobs)
 }
 
-func updateDB(supplier_id int, menuItem model.Menu) {
+func updateDB(menu_id int, menuItem model.Menu) int {
 	db := db.GetDB()
-	stmt, err := db.Prepare("INSERT INTO menu_items (image, ingredients, name, price, type) VALUES ($1, $2, $3, $4, $5)")
+	stmt, err := db.Prepare("UPDATE menu_items SET image = $1, ingredients = $2, name = $3, price = $4, type = $5 WHERE menu_id = $6")
 	if err != nil {
 		panic(err)
 	}
-	_, err = stmt.Exec(menuItem.Image, menuItem.Ingredients, menuItem.Name, menuItem.Price, menuItem.Type)
+	_, err = stmt.Exec(menuItem.Image, menuItem.Ingredients, menuItem.Name, menuItem.Price, menuItem.Type, menu_id)
 	if err != nil {
 		panic(err)
 	}
+	return menu_id
 }
 
 func processMenu(id int) {
@@ -78,7 +80,8 @@ func processMenu(id int) {
 	}
 
 	for i := 0; i < len(menu.Menu); i++ {
-		updateDB(id, menu.Menu[i])
+		result := Result{id: updateDB(id, menu.Menu[i])}
+		results <- result
 	}
 }
 
@@ -90,7 +93,7 @@ func worker(wg *sync.WaitGroup) {
 }
 
 func createWorkerPool() {
-	var wg *sync.WaitGroup
+	wg := &sync.WaitGroup{}
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
 		go worker(wg)
